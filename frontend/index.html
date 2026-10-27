@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local Skill Marketplace</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="http://localhost:500/socket.io/socket.io.js"></script>
+
+<style>
+:root {
+  --primary: #7047eb;
+  --primary-dark: #5632cf;
+  --light: #f6f5fc;
+  --text: #24223a;
+  --muted: #85839b;
+  --border: #eceaf4;
+  --white: #fff;
+  --green: #19996c;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Inter, sans-serif;
+  background: var(--light);
+  color: var(--text);
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 245px; background: white; border-right: 1px solid var(--border);
+  padding: 27px 18px; position: fixed; inset: 0 auto 0 0; z-index: 5;
+}
+.logo { display:flex; align-items:center; gap:11px; padding:0 10px; margin-bottom:40px; }
+.logo-icon {
+  width:42px; height:42px; border-radius:14px; display:grid; place-items:center;
+  color:white; background:linear-gradient(135deg,#9878ff,#6541e7);
+  box-shadow:0 7px 18px #7047eb33;
+}
+.logo h2 { font-size:16px; line-height:1.4; }
+.logo small { color:var(--muted); font-size:10px; }
+.nav-label { color:#aaa7bd; font-size:10px; font-weight:800; letter-spacing:1.3px; padding:0 12px; margin-bottom:12px; }
+.nav-btn {
+  border:0; background:transparent; width:100%; display:flex; gap:13px;
+  align-items:center; padding:13px 14px; border-radius:12px; margin-bottom:5px;
+  color:#77758d; font-size:13px; text-align:left; transition:.2s;
+}
+.nav-btn i { width:18px; }
+.nav-btn:hover, .nav-btn.active { background:#f0ebff; color:var(--primary); font-weight:700; }
+.sidebar-bottom { position:absolute; bottom:24px; left:18px; right:18px; }
+.help-card { background:#f5f1ff; padding:16px; border-radius:15px; font-size:12px; line-height:1.7; }
+.help-card i { color:var(--primary); margin-bottom:8px; font-size:19px; }
+.help-card p { color:var(--muted); margin-top:4px; }
+.main { margin-left:245px; width:calc(100% - 245px); padding:27px 35px 45px; }
+.topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:28px; }
+.eyebrow { color:var(--muted); font-size:12px; margin-bottom:7px; }
+.topbar h1 { font-size:25px; letter-spacing:-.8px; }
+.top-actions { display:flex; align-items:center; gap:12px; }
+.icon-btn {
+  width:41px; height:41px; border:1px solid var(--border); background:white;
+  border-radius:12px; color:#77758d; display:inline-grid; place-items:center;
+}
+.user-chip { display:flex; align-items:center; gap:9px; background:white; border:1px solid var(--border); padding:7px 12px 7px 7px; border-radius:13px; font-size:12px; font-weight:700; }
+.avatar { width:31px; height:31px; display:grid; place-items:center; border-radius:10px; color:#6742d8; background:#eee7ff; }
+.primary-btn, .secondary-btn {
+  border:0; padding:12px 17px; border-radius:11px; font-size:12px; font-weight:700; transition:.2s;
+}
+.primary-btn { background:var(--primary); color:white; box-shadow:0 5px 13px #7047eb22; }
+.primary-btn:hover { background:var(--primary-dark); transform:translateY(-1px); }
+.secondary-btn { background:white; border:1px solid var(--border); color:var(--text); }
+.welcome {
+  position:relative; overflow:hidden; padding:29px 31px; border-radius:22px; color:white;
+  background:linear-gradient(110deg,#6940df,#9271f4); margin-bottom:25px;
+}
+.welcome:after { content:""; position:absolute; width:240px; height:240px; border:38px solid #ffffff13; border-radius:50%; right:-65px; top:-110px; }
+.welcome h2 { font-size:25px; margin:9px 0; max-width:500px; }
+.welcome p { color:#eee7ff; font-size:13px; line-height:1.7; max-width:480px; }
+.welcome .tag { background:#ffffff21; border:1px solid #ffffff36; padding:7px 10px; display:inline-block; border-radius:20px; font-size:10px; }
+.welcome .primary-btn { background:white; color:#6840db; margin-top:20px; }
+.stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-bottom:29px; }
+.stat-card, .panel, .service-card, .provider-card { background:white; border:1px solid var(--border); border-radius:17px; }
+.stat-card { padding:19px; }
+.stat-head { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; }
+.stat-icon { width:35px; height:35px; border-radius:11px; display:grid; place-items:center; background:#f0ebff; color:var(--primary); }
+.stat-number { font-size:26px; font-weight:800; margin-top:15px; }
+.stat-foot { color:var(--muted); font-size:10px; margin-top:6px; }
+.section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.section-head h2 { font-size:17px; }
+.section-head p { font-size:11px; color:var(--muted); margin-top:5px; }
+.text-btn { border:0; background:none; color:var(--primary); font-size:12px; font-weight:700; }
+.services-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:30px; }
+.service-card { padding:20px 13px; cursor:pointer; transition:.2s; }
+.service-card:hover { border-color:#b9a7ff; transform:translateY(-3px); box-shadow:0 10px 25px #3420600c; }
+.service-icon { width:46px; height:46px; border-radius:14px; display:grid; place-items:center; font-size:20px; margin-bottom:15px; }
+.purple { background:#f0eaff; color:#7950e9; }
+.orange { background:#fff0e3; color:#e89135; }
+.blue { background:#e8f4ff; color:#3388d8; }
+.green { background:#e4f8ef; color:#219b69; }
+.service-card h3 { font-size:12px; margin-bottom:7px; }
+.service-card p { font-size:10px; color:var(--muted); line-height:1.5; }
+.content-grid { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(230px,1fr); gap:20px; }
+.panel { padding:21px; min-width:0; }
+.search-row { display:flex; gap:9px; margin-bottom:17px; }
+.searchbox { flex:1; position:relative; min-width:0; }
+.searchbox i { position:absolute; left:13px; top:14px; color:#aaa7bd; }
+.searchbox input { width:100%; padding:12px 12px 12px 37px; border:1px solid var(--border); border-radius:10px; outline:none; font-size:12px; }
+.searchbox input:focus { border-color:#a48cff; }
+.provider-list { display:grid; gap:12px; }
+.provider-card { padding:14px; display:flex; align-items:center; gap:12px; }
+.provider-avatar { width:46px; height:46px; border-radius:14px; display:grid; place-items:center; font-size:19px; color:#7651d8; background:#f0eaff; flex-shrink:0; }
+.provider-info { flex:1; min-width:0; }
+.provider-info h3 { font-size:12px; margin-bottom:6px; }
+.provider-info p { color:var(--muted); font-size:10px; line-height:1.6; }
+.provider-meta { display:flex; gap:9px; flex-wrap:wrap; margin-top:5px; font-size:10px; }
+.rating { color:#d89125; }
+.price { color:var(--green); font-weight:800; white-space:nowrap; font-size:12px; }
+.empty { padding:25px 10px; text-align:center; color:var(--muted); font-size:12px; line-height:1.8; }
+.ai-panel { background:linear-gradient(145deg,#fbf9ff,#f0eaff); border:1px solid #e9e0ff; border-radius:17px; padding:21px; }
+.ai-heading { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.ai-heading span { width:39px; height:39px; display:grid; place-items:center; color:white; border-radius:13px; background:linear-gradient(135deg,#9e7cff,#6840df); }
+.ai-heading h3 { font-size:14px; }
+.ai-heading p { font-size:10px; color:var(--muted); margin-top:4px; }
+.ai-panel > p { color:#77718f; font-size:11px; line-height:1.8; margin-bottom:16px; }
+.ai-panel textarea { width:100%; resize:vertical; min-height:94px; border:1px solid #e2d8ff; border-radius:11px; padding:12px; outline:none; font-size:11px; margin-bottom:11px; }
+.ai-result { font-size:11px; line-height:1.8; margin-top:14px; padding:13px; border-radius:10px; background:#fff; display:none; }
+.activity { display:grid; gap:17px; }
+.activity-item { display:flex; gap:11px; align-items:flex-start; }
+.activity-icon { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; flex-shrink:0; background:#f0ebff; color:var(--primary); }
+.activity-item h4 { font-size:11px; margin:3px 0 5px; }
+.activity-item p { color:var(--muted); font-size:10px; line-height:1.6; }
+.page { display:none; }
+.page.active { display:block; }
+.form-panel { max-width:520px; margin:10px auto; padding:25px; background:white; border:1px solid var(--border); border-radius:18px; }
+.form-panel h2 { margin-bottom:7px; font-size:20px; }
+.form-panel > p { color:var(--muted); font-size:12px; margin-bottom:22px; line-height:1.7; }
+.field { margin-bottom:15px; }
+.field label { display:block; font-size:11px; font-weight:700; margin-bottom:7px; }
+.field input, .field select, .field textarea { width:100%; border:1px solid var(--border); padding:12px; border-radius:10px; outline:none; font-size:12px; background:white; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color:#a48cff; }
+.form-panel .primary-btn { width:100%; }
+.message { font-size:12px; line-height:1.7; margin-top:12px; overflow-wrap:anywhere; }
+.toast { position:fixed; bottom:22px; right:22px; z-index:20; background:#25213a; color:white; border-radius:12px; padding:14px 18px; font-size:12px; display:none; max-width:340px; box-shadow:0 8px 30px #0002; }
+.mobile-menu { display:none; }
+footer { text-align:center; color:#aaa7bd; font-size:10px; margin-top:35px; }
+@media(max-width:1150px) {
+  .main { padding:24px; }
+  .services-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .content-grid { grid-template-columns:1fr; }
+}
+@media(max-width:720px) {
+  .sidebar { width:72px; padding:20px 9px; }
+  .logo { justify-content:center; padding:0; }
+  .logo > div:last-child, .nav-label, .nav-btn span, .help-card { display:none; }
+  .nav-btn { justify-content:center; padding:14px 5px; }
+  .nav-btn i { width:auto; }
+  .main { margin-left:72px; width:calc(100% - 72px); padding:20px 13px; }
+  .topbar h1 { font-size:19px; }
+  .top-actions .user-chip { display:none; }
+  .top-actions .primary-btn { padding:10px; }
+  .welcome { padding:22px; }
+  .welcome h2 { font-size:21px; }
+  .stats { grid-template-columns:1fr; gap:10px; }
+  .stat-card { padding:14px; }
+  .stat-number { font-size:22px; }
+  .services-grid { gap:9px; }
+  .service-card { padding:14px 10px; }
+  .panel { padding:14px; }
+  .provider-card { gap:8px; padding:11px; }
+  .provider-avatar { width:38px; height:38px; }
+  .price { font-size:10px; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon"><i class="fa-solid fa-handshake-angle"></i></div>
+      <div><h2>Local Skill</h2><small>MARKETPLACE</small></div>
+    </div>
+
+    <div class="nav-label">WORKSPACE</div>
+    <button class="nav-btn" data-page="dashboard"><i class="fa-solid fa-house"></i><span>Dashboard</span></button>
+    <button class="nav-btn cust-nav" data-page="services"><i class="fa-solid fa-layer-group"></i><span>Explore Services</span></button>
+    <button class="nav-btn" data-page="bookings" id="navBookingsBtn"><i class="fa-regular fa-calendar-check"></i><span>My Bookings</span></button>
+    <button class="nav-btn cust-nav" data-page="providers"><i class="fa-solid fa-users"></i><span>Providers</span></button>
+    <button class="nav-btn active" data-page="account" id="navAccountBtn"><i class="fa-regular fa-user"></i><span>Account</span></button>
+
+    <div class="sidebar-bottom">
+      <div class="help-card">
+        <i class="fa-solid fa-circle-question"></i>
+        <strong>Need some help?</strong>
+        <p id="helpCardText">Find the right local professional for your needs.</p>
+        <button class="text-btn" id="helpCardBtn" data-page="services">Explore services →</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="hubEyebrow">YOUR LOCAL SERVICES HUB</p>
+        <h1 id="pageTitle">Account</h1>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="refreshBtn" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+        <div class="user-chip"><div class="avatar"><i class="fa-regular fa-user"></i></div><span id="userName">Guest User</span></div>
+        <button class="primary-btn" id="topAuthBtn" data-page="account"><i class="fa-solid fa-arrow-right-to-bracket"></i> Sign in</button>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="page">
+      <!-- Customer Dashboard View -->
+      <div id="customerDashboard">
+        <div class="welcome">
+          <span class="tag"><i class="fa-solid fa-sparkles"></i> YOUR NEIGHBOURHOOD, CONNECTED</span>
+          <h2>Great skills. Right around the corner.</h2>
+          <p>Discover trusted local professionals for everyday tasks. Find the right skill, compare providers, and organise your next service.</p>
+          <button class="primary-btn" data-page="services">Explore services <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-head"><span>Available categories</span><span class="stat-icon"><i class="fa-solid fa-shapes"></i></span></div>
+            <div class="stat-number">04</div><div class="stat-foot">Services to get you started</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-head"><span>My bookings</span><span class="stat-icon"><i class="fa-regular fa-calendar-check"></i></span></div>
+            <div class="stat-number" id="bookingCount">—</div><div class="stat-foot">Loaded from your account when available</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-head"><span>Smart matching</span><span class="stat-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span></div>
+            <div class="stat-number">AI</div><div class="stat-foot">Keyword-based service suggestions</div>
+          </div>
+        </div>
+
+        <div class="section-head"><div><h2>Explore categories</h2><p>What can we help you with today?</p></div><button class="text-btn" data-page="services">View all →</button></div>
+        <div class="services-grid">
+          <div class="service-card" data-service="Plumbing"><div class="service-icon blue"><i class="fa-solid fa-faucet-drip"></i></div><h3>Plumbing</h3><p>Leaks, taps and pipe repairs</p></div>
+          <div class="service-card" data-service="Electrical"><div class="service-icon orange"><i class="fa-solid fa-bolt"></i></div><h3>Electrical</h3><p>Wiring, lights and repairs</p></div>
+          <div class="service-card" data-service="Cleaning"><div class="service-icon green"><i class="fa-solid fa-broom"></i></div><h3>Cleaning</h3><p>Home and workspace care</p></div>
+          <div class="service-card" data-service="Appliance Repair"><div class="service-icon purple"><i class="fa-solid fa-screwdriver-wrench"></i></div><h3>Appliance repair</h3><p>Help with everyday appliances</p></div>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel">
+            <div class="section-head"><div><h2>Find a professional</h2><p>Search for the skill you need</p></div></div>
+            <div class="search-row">
+              <div class="searchbox"><i class="fa-solid fa-magnifying-glass"></i><input id="serviceSearch" placeholder="e.g. plumber, electrician..."></div>
+              <button class="primary-btn" id="searchProviders">Search</button>
+            </div>
+            <div id="dashboardProviders" class="provider-list">
+              <div class="empty">Search for a service to discover matching professionals.</div>
+            </div>
+          </section>
+
+          <section class="ai-panel">
+            <div class="ai-heading"><span><i class="fa-solid fa-wand-magic-sparkles"></i></span><div><h3>Smart Service Assistant</h3><p>Find a service using your needs</p></div></div>
+            <p>Describe the problem in your own words. The demo assistant will suggest a service category using keyword matching.</p>
+            <textarea id="aiInput" placeholder="Example: My kitchen tap is leaking..."></textarea>
+            <button class="primary-btn" id="recommendBtn" style="width:100%">Recommend a service <i class="fa-solid fa-arrow-right"></i></button>
+            <div id="aiResult" class="ai-result" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <section class="panel" style="margin-top:20px">
+          <div class="section-head"><div><h2>Recent activity</h2><p>Your marketplace at a glance</p></div></div>
+          <div class="activity">
+            <div class="activity-item"><div class="activity-icon"><i class="fa-solid fa-magnifying-glass"></i></div><div><h4>Discover local skills</h4><p>Search the marketplace to find a professional for your next task.</p></div></div>
+            <div class="activity-item"><div class="activity-icon"><i class="fa-regular fa-calendar-check"></i></div><div><h4>Manage your bookings</h4><p>Sign in to view your bookings and chat with providers.</p></div></div>
+            <div class="activity-item"><div class="activity-icon"><i class="fa-solid fa-shield-halved"></i></div><div><h4>Compare before choosing</h4><p>Review real provider ratings, experience, and phone numbers.</p></div></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Service Provider Dashboard View -->
+      <div id="providerDashboard" style="display:none;">
+        <div class="welcome">
+          <span class="tag"><i class="fa-solid fa-briefcase"></i> SERVICE PROVIDER WORKSPACE</span>
+          <h2 id="providerWelcomeName">Welcome to your Provider Hub</h2>
+          <p>Review customer booking requests, accept incoming jobs, communicate via real-time live chat, and complete scheduled services.</p>
+          <button class="primary-btn" data-page="bookings">View Booking Requests <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-head"><span>Booking Requests</span><span class="stat-icon"><i class="fa-regular fa-calendar-check"></i></span></div>
+            <div class="stat-number" id="providerBookingCount">0</div><div class="stat-foot">Assigned to your profile</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-head"><span>Average Rating</span><span class="stat-icon"><i class="fa-solid fa-star"></i></span></div>
+            <div class="stat-number" id="providerRatingVal">0.0</div><div class="stat-foot">Customer feedback score</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-head"><span>Profile Status</span><span class="stat-icon"><i class="fa-solid fa-id-badge"></i></span></div>
+            <div class="stat-number" style="font-size:18px; line-height:35px; color:var(--primary);" id="providerExpVal">Active</div><div class="stat-foot">Verified local professional</div>
+          </div>
+        </div>
+
+        <section class="panel" style="margin-top:20px">
+          <div class="section-head"><div><h2>Quick Management</h2><p>Actions for your provider account</p></div></div>
+          <div class="activity">
+            <div class="activity-item" style="cursor:pointer;" data-page="bookings">
+              <div class="activity-icon"><i class="fa-regular fa-calendar-check"></i></div>
+              <div><h4>Manage Booking Requests</h4><p>Accept pending requests, mark services complete, and chat with customers.</p></div>
+            </div>
+            <div class="activity-item" style="cursor:pointer;" data-page="account">
+              <div class="activity-icon"><i class="fa-regular fa-user"></i></div>
+              <div><h4>Update Profile & Skills</h4><p>Edit your contact number, complete address, experience, and services.</p></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section id="services" class="page">
+      <div class="section-head"><div><h2>Explore services</h2><p>Select a category or search for a local professional.</p></div></div>
+      <div class="services-grid">
+        <div class="service-card" data-service="Plumbing"><div class="service-icon blue"><i class="fa-solid fa-faucet-drip"></i></div><h3>Plumbing</h3><p>Water and pipe repairs</p></div>
+        <div class="service-card" data-service="Electrical"><div class="service-icon orange"><i class="fa-solid fa-bolt"></i></div><h3>Electrical</h3><p>Electrical maintenance</p></div>
+        <div class="service-card" data-service="Cleaning"><div class="service-icon green"><i class="fa-solid fa-broom"></i></div><h3>Cleaning</h3><p>Home cleaning services</p></div>
+        <div class="service-card" data-service="Appliance Repair"><div class="service-icon purple"><i class="fa-solid fa-screwdriver-wrench"></i></div><h3>Appliance repair</h3><p>Appliance maintenance</p></div>
+      </div>
+      <div class="panel">
+        <div class="search-row"><div class="searchbox"><i class="fa-solid fa-magnifying-glass"></i><input id="serviceSearch2" placeholder="Search by skill or service"></div><button class="primary-btn" id="searchProviders2">Search</button></div>
+        <div id="serviceProviders" class="provider-list"><div class="empty">Choose a category or search to find providers.</div></div>
+      </div>
+    </section>
+
+    <!-- PROVIDERS -->
+    <section id="providers" class="page">
+      <div class="section-head"><div><h2>Local professionals</h2><p>Search available service providers.</p></div><button class="secondary-btn" id="loadProviders"><i class="fa-solid fa-rotate"></i> Load providers</button></div>
+      <div class="panel">
+        <div class="search-row"><div class="searchbox"><i class="fa-solid fa-magnifying-glass"></i><input id="providerSearch" placeholder="Search providers or skills"></div><button class="primary-btn" id="providerSearchBtn">Search</button></div>
+        <div id="allProviders" class="provider-list"><div class="empty">Click “Load providers” or search for a skill.</div></div>
+      </div>
+    </section>
+
+    <!-- BOOKINGS -->
+    <section id="bookings" class="page">
+      <div class="section-head"><div id="bookingsHeadText"><h2>My bookings</h2><p>Review your service booking information.</p></div><button class="secondary-btn" id="loadBookings"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
+      <div class="panel"><div id="bookingList" class="provider-list"><div class="empty">Sign in first, then load your bookings.</div></div></div>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section id="account" class="page active">
+      <div class="form-panel">
+        <div id="authFormContainer">
+          <h2 id="authFormTitle">Welcome to your marketplace</h2>
+          <p id="authFormDesc">Sign in with your name and password, or create an account.</p>
+          <div class="field">
+            <label for="authType">Account type</label>
+            <select id="authType">
+              <option value="customer">Customer</option>
+              <option value="provider">Service provider</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="authMode">Action</label>
+            <select id="authMode">
+              <option value="login">Sign in</option>
+              <option value="register">Create account</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="authName">Full name</label>
+            <input id="authName" placeholder="Enter your full name" required>
+          </div>
+          <div class="field">
+            <label for="authPassword">Password</label>
+            <input id="authPassword" type="password" placeholder="Enter password" required>
+          </div>
+          <!-- Registration extra fields (no email required) -->
+          <div class="field reg-field" style="display:none">
+            <label for="authMobile">Mobile number</label>
+            <input id="authMobile" placeholder="e.g. 9876543210">
+          </div>
+          <div class="field reg-field" style="display:none">
+            <label for="authAddress">Complete address</label>
+            <textarea id="authAddress" rows="3" placeholder="House/Flat No., Street, Area/Locality, City, State, PIN code"></textarea>
+          </div>
+          <!-- Provider registration extra fields -->
+          <div class="field prov-field" style="display:none">
+            <label for="authSkill">Services offered</label>
+            <input id="authSkill" placeholder="e.g. Plumbing, Electrical">
+          </div>
+          <div class="field prov-field" style="display:none">
+            <label for="authExperience">Experience (years)</label>
+            <input id="authExperience" type="number" min="0" placeholder="e.g. 3">
+          </div>
+          <div class="field prov-field" style="display:none">
+            <label for="authAvailability">Availability</label>
+            <input id="authAvailability" placeholder="e.g. 9 AM - 6 PM">
+          </div>
+          <button class="primary-btn" id="authSubmit">Sign in</button>
+        </div>
+        <div class="message" id="authMessage" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <footer>LOCAL SKILL MARKETPLACE · Connecting skills with neighbourhood needs</footer>
+  </main>
+</div>
+
+<div id="toast" class="toast" role="status"></div>
+
+<!-- Live Chat Modal -->
+<div id="chatModal" style="display:none; position:fixed; inset:0; background:rgba(36,34,58,0.45); z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+  <div class="panel" style="width:90%; max-width:480px; height:540px; display:flex; flex-direction:column; padding:0; overflow:hidden; box-shadow:0 20px 40px rgba(0,0,0,0.15);">
+    <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:white;">
+      <div>
+        <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-comments" style="color:var(--primary);"></i>
+          <span id="chatTitle">Booking Chat</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:2px;" id="chatSubtitle">Booking ID: —</div>
+      </div>
+      <button class="icon-btn" id="closeChatBtn" style="border:none; cursor:pointer;" title="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="chatMessages" style="flex:1; overflow-y:auto; padding:18px 20px; background:var(--light); display:flex; flex-direction:column; gap:12px;">
+      <div class="empty">Loading messages...</div>
+    </div>
+    <div style="padding:14px 18px; border-top:1px solid var(--border); background:white; display:flex; gap:10px; align-items:center;">
+      <input type="text" id="chatMessageInput" placeholder="Type a message..." style="flex:1; border:1px solid var(--border); padding:10px 14px; border-radius:10px; outline:none; font-size:12px; background:white;">
+      <button class="primary-btn" id="sendChatMessageBtn" style="padding:10px 18px; font-size:12px; display:flex; align-items:center; gap:6px;">
+        <span>Send</span> <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  BACKEND CONFIGURATION
+  Points to the running Local Skill Marketplace backend on port 500.
+*/
+const API = "http://localhost:500/api";
+let authToken = localStorage.getItem("lsmToken") || "";
+let currentUser = JSON.parse(localStorage.getItem("lsmUser") || "null");
+
+const categoryIcons = {
+  plumbing: "fa-faucet-drip",
+  electrical: "fa-bolt",
+  cleaning: "fa-broom",
+  "appliance repair": "fa-screwdriver-wrench",
+  default: "fa-user-gear"
+};
+
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  })[char]);
+}
+
+function notify(message) {
+  $("#toast").text(message).stop(true, true).fadeIn(180);
+  setTimeout(() => $("#toast").fadeOut(250), 3200);
+}
+
+function updateNavigationForRole() {
+  const isProv = currentUser && (currentUser.role === "provider" || !!currentUser.ProviderId);
+
+  if (!currentUser) {
+    $(".cust-nav").show();
+    $("#navBookingsBtn").show().find("span").text("My Bookings");
+    $("#navAccountBtn").find("span").text("Sign in");
+    $("#bookingsHeadText").html('<h2>My bookings</h2><p>Review your service booking information.</p>');
+    $("#helpCardText").text("Find the right local professional for your needs.");
+    $("#helpCardBtn").text("Explore services →").attr("data-page", "services");
+    $("#customerDashboard").show();
+    $("#providerDashboard").hide();
+    return;
+  }
+
+  if (isProv) {
+    // Provider navigation: Dashboard, Booking Requests, Profile (Explore Services and Providers HIDDEN)
+    $(".cust-nav").hide();
+    $("#navBookingsBtn").show().find("span").text("Booking Requests");
+    $("#navAccountBtn").find("span").text("Profile");
+    $("#bookingsHeadText").html('<h2>Booking Requests</h2><p>Incoming customer requests assigned to your service profile.</p>');
+    $("#helpCardText").text("Manage your incoming customer requests and chat.");
+    $("#helpCardBtn").text("View requests →").attr("data-page", "bookings");
+    $("#customerDashboard").hide();
+    $("#providerDashboard").show();
+    $("#providerWelcomeName").text(`Welcome, ${escapeHTML(currentUser.name || 'Provider')}`);
+  } else {
+    // Customer navigation: Dashboard, Explore Services, My Bookings, Providers, Account
+    $(".cust-nav").show();
+    $("#navBookingsBtn").show().find("span").text("My Bookings");
+    $("#navAccountBtn").find("span").text("Account");
+    $("#bookingsHeadText").html('<h2>My bookings</h2><p>Review your service booking information.</p>');
+    $("#helpCardText").text("Find the right local professional for your needs.");
+    $("#helpCardBtn").text("Explore services →").attr("data-page", "services");
+    $("#customerDashboard").show();
+    $("#providerDashboard").hide();
+  }
+}
+
+function showPage(page) {
+  // If guest attempts to open bookings without login, redirect to account
+  if (!currentUser && page === "bookings") {
+    notify("Please sign in first to access your bookings.");
+    page = "account";
+  }
+
+  // Enforce role check: Providers cannot access customer Explore Services or Providers pages
+  if (currentUser && (currentUser.role === "provider" || !!currentUser.ProviderId)) {
+    if (page === "services" || page === "providers") {
+      notify("Access restricted: Providers cannot access customer search pages.");
+      page = "dashboard";
+    }
+  }
+
+  $(".page").removeClass("active");
+  $("#" + page).addClass("active");
+  $(".nav-btn").removeClass("active");
+  $('.nav-btn[data-page="' + page + '"]').addClass("active");
+
+  const isProv = currentUser && (currentUser.role === "provider" || !!currentUser.ProviderId);
+  const titles = {
+    dashboard: isProv ? "Provider Dashboard" : "Dashboard",
+    services: "Explore Services",
+    bookings: isProv ? "Booking Requests" : "My Bookings",
+    providers: "Providers",
+    account: isProv ? "Provider Profile" : (currentUser ? "Customer Profile" : "Account")
+  };
+  $("#pageTitle").text(titles[page] || "Dashboard");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  if (page === "providers") {
+    searchProviders($("#providerSearch").val(), "#allProviders");
+  } else if (page === "services") {
+    const val = $("#serviceSearch2").val();
+    searchProviders(val || "", "#serviceProviders");
+  } else if (page === "bookings") {
+    loadBookings();
+  } else if (page === "account") {
+    renderAccountProfile();
+  }
+}
+
+$(document).on("click", "[data-page]", function() {
+  showPage($(this).data("page"));
+});
+
+async function refreshUserProfile() {
+  if (!currentUser) return;
+  try {
+    const isProv = currentUser.role === "provider" || !!currentUser.ProviderId;
+    const id = currentUser.CustomerID || currentUser.ProviderId;
+    if (id) {
+      const endpoint = isProv ? `/providers/profile/${encodeURIComponent(id)}` : `/customers/profile/${encodeURIComponent(id)}`;
+      const freshData = await apiRequest(endpoint);
+      if (freshData) {
+        freshData.role = isProv ? "provider" : "customer";
+        currentUser = { ...currentUser, ...freshData };
+        localStorage.setItem("lsmUser", JSON.stringify(currentUser));
+        $("#userName").text(currentUser.name || "User");
+        if (isProv) {
+          $("#providerRatingVal").text(currentUser.rating != null ? Number(currentUser.rating).toFixed(1) : "0.0");
+          $("#providerExpVal").text((currentUser.experience || 1) + " yrs exp");
+        }
+        renderAccountProfile();
+      }
+    }
+  } catch (err) {
+    console.error("Failed to refresh profile:", err);
+  }
+}
+
+function renderAccountProfile() {
+  if (currentUser) {
+    $("#authFormContainer").hide();
+    const id = currentUser.CustomerID || currentUser.ProviderId || "";
+    const isProv = currentUser.role === "provider" || !!currentUser.ProviderId;
+    const roleText = isProv ? "Service Provider" : "Customer";
+
+    const profileHtml = `
+      <div style="padding:4px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <h3 style="font-size:16px; font-weight:700; color:var(--text);"><i class="fa-solid fa-id-badge" style="color:var(--primary); margin-right:6px;"></i> ${roleText} Profile</h3>
+            <p style="font-size:11px; color:var(--muted); margin-top:2px;">ID: <strong>${escapeHTML(id)}</strong></p>
+          </div>
+          ${isProv ? `<div style="font-size:13px; font-weight:700; color:#d89125;"><i class="fa-solid fa-star"></i> ${escapeHTML(currentUser.rating ?? 0)} rating</div>` : ''}
+        </div>
+
+        <div class="field">
+          <label for="profName">Full name</label>
+          <input id="profName" value="${escapeHTML(currentUser.name || '')}" placeholder="Your full name">
+        </div>
+
+        <div class="field">
+          <label for="profMobile">Mobile number</label>
+          <input id="profMobile" value="${escapeHTML(currentUser.mobile !== 'N/A' ? (currentUser.mobile || '') : '')}" placeholder="e.g. 9876543210">
+        </div>
+
+        <div class="field">
+          <label for="profAddress">Complete address</label>
+          <textarea id="profAddress" rows="3" placeholder="House/Flat No., Street, Area/Locality, Landmark, City, State, PIN code">${escapeHTML(currentUser.address !== 'N/A' ? (currentUser.address || '') : '')}</textarea>
+        </div>
+
+        ${isProv ? `
+          <div class="field">
+            <label for="profServices">Services / Skills offered (comma-separated)</label>
+            <input id="profServices" value="${escapeHTML(Array.isArray(currentUser.services) ? currentUser.services.join(", ") : (currentUser.services || ''))}" placeholder="e.g. Plumbing, Electrical">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="field">
+              <label for="profExperience">Experience (years)</label>
+              <input type="number" min="0" id="profExperience" value="${escapeHTML(currentUser.experience != null ? currentUser.experience : '1')}">
+            </div>
+            <div class="field">
+              <label for="profAvailability">Availability</label>
+              <input id="profAvailability" value="${escapeHTML(currentUser.availability || '9 AM - 6 PM')}" placeholder="e.g. 9 AM - 6 PM">
+            </div>
+          </div>
+        ` : ''}
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button class="primary-btn" id="saveProfileBtn" style="flex:1;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+          <button class="secondary-btn" id="logoutBtn" style="flex:1;"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sign out</button>
+        </div>
+        <div id="profFeedback" class="message" style="margin-top:12px;" aria-live="polite"></div>
+      </div>`;
+    $("#authMessage").html(profileHtml);
+
+    $("#logoutBtn").off("click").on("click", function() {
+      setUser(null);
+      notify("Signed out successfully.");
+      showPage("account");
+    });
+  } else {
+    $("#authFormContainer").show();
+    $("#authMessage").empty();
+  }
+}
+
+function setUser(user) {
+  currentUser = user;
+  if (user) {
+    localStorage.setItem("lsmUser", JSON.stringify(user));
+    $("#userName").text(user.name || "User");
+    const isProv = user.role === "provider" || !!user.ProviderId;
+    $("#topAuthBtn").html(`<i class="fa-regular fa-user"></i> ${isProv ? 'Profile' : 'Account'}`);
+  } else {
+    localStorage.removeItem("lsmUser");
+    localStorage.removeItem("lsmToken");
+    $("#userName").text("Guest User");
+    $("#topAuthBtn").html('<i class="fa-solid fa-arrow-right-to-bracket"></i> Sign in');
+    $("#bookingCount").text("—");
+    $("#providerBookingCount").text("0");
+  }
+  updateNavigationForRole();
+  renderAccountProfile();
+}
+
+function headers() {
+  const result = { "Content-Type": "application/json" };
+  if (authToken) result.Authorization = "Bearer " + authToken;
+  return result;
+}
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(API + path, {
+    ...options,
+    headers: { ...headers(), ...(options.headers || {}) }
+  });
+
+  const raw = await response.text();
+  let data = {};
+  try { data = raw ? JSON.parse(raw) : {}; }
+  catch { data = { message: raw }; }
+
+  if (!response.ok) {
+    throw new Error(data.message || data.error || "Request failed (" + response.status + ")");
+  }
+  return data;
+}
+
+function normaliseList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.providers)) return data.providers;
+  if (Array.isArray(data.results)) return data.results;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+function providerCard(provider) {
+  const name = provider.name || provider.fullName || "Local professional";
+  const skills = provider.services || provider.skills || provider.skill || "General Service";
+  const skillText = Array.isArray(skills) ? skills.join(", ") : skills;
+  const rating = provider.rating;
+  const experience = provider.experience ? `${provider.experience} yrs exp` : "";
+  const availability = provider.availability || "";
+  const address = provider.address || provider.location || "";
+  const mobile = provider.mobile && provider.mobile !== "N/A" ? provider.mobile : "";
+  const iconKey = String(skillText).toLowerCase();
+  const icon = Object.keys(categoryIcons).find(key => iconKey.includes(key));
+  const firstService = Array.isArray(skills) ? skills[0] : (skills || "Service");
+
+  const isProviderUser = currentUser && (currentUser.role === "provider" || !!currentUser.ProviderId);
+
+  return `
+    <article class="provider-card">
+      <div class="provider-avatar"><i class="fa-solid ${categoryIcons[icon] || categoryIcons.default}"></i></div>
+      <div class="provider-info">
+        <h3>${escapeHTML(name)}</h3>
+        <p>${escapeHTML(skillText)}</p>
+        <div class="provider-meta">
+          ${rating != null ? `<span class="rating"><i class="fa-solid fa-star"></i> ${escapeHTML(rating)}</span>` : ""}
+          ${experience ? `<span><i class="fa-solid fa-briefcase"></i> ${escapeHTML(experience)}</span>` : ""}
+          ${availability ? `<span><i class="fa-regular fa-clock"></i> ${escapeHTML(availability)}</span>` : ""}
+          ${address ? `<span><i class="fa-solid fa-location-dot"></i> ${escapeHTML(address)}</span>` : ""}
+          ${mobile ? `<span><i class="fa-solid fa-phone"></i> ${escapeHTML(mobile)}</span>` : ""}
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+        <div class="price">${experience || "Available"}</div>
+        ${isProviderUser 
+          ? `<button class="secondary-btn view-bookings-btn" style="padding:6px 14px; font-size:11px;" data-page="bookings">My Bookings</button>`
+          : `<button class="primary-btn book-btn" style="padding:6px 14px; font-size:11px;" data-provider-id="${escapeHTML(provider.ProviderId || '')}" data-provider-name="${escapeHTML(name)}" data-service="${escapeHTML(firstService)}">Book</button>`
+        }
+      </div>
+    </article>`;
+}
+
+function renderProviders(target, list) {
+  const $target = $(target);
+  if (!list.length) {
+    $target.html('<div class="empty">No providers found. Try another search or check your backend connection.</div>');
+    return;
+  }
+  $target.html(list.map(providerCard).join(""));
+}
+
+async function searchProviders(service, target) {
+  const query = (service || "").trim();
+  $(target).html('<div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Searching providers...</div>');
+
+  try {
+    const url = query ? `/search/providers?search=${encodeURIComponent(query)}` : "/search/providers";
+    const result = await apiRequest(url);
+    renderProviders(target, normaliseList(result));
+  } catch (error) {
+    $(target).html(`<div class="empty">${escapeHTML(error.message)}<br>Check that your backend is running.</div>`);
+  }
+}
+
+$("#searchProviders").on("click", () => searchProviders($("#serviceSearch").val(), "#dashboardProviders"));
+$("#serviceSearch").on("keydown", e => { if (e.key === "Enter") $("#searchProviders").click(); });
+$("#searchProviders2").on("click", () => searchProviders($("#serviceSearch2").val(), "#serviceProviders"));
+$("#serviceSearch2").on("keydown", e => { if (e.key === "Enter") $("#searchProviders2").click(); });
+$("#providerSearchBtn").on("click", () => searchProviders($("#providerSearch").val(), "#allProviders"));
+$("#providerSearch").on("keydown", e => { if (e.key === "Enter") $("#providerSearchBtn").click(); });
+
+$(".service-card").on("click", function() {
+  const service = $(this).data("service");
+  $("#serviceSearch, #serviceSearch2, #providerSearch").val(service);
+  const page = $(this).closest("#services").length ? "#serviceProviders" : "#dashboardProviders";
+  if (page === "#serviceProviders") {
+    showPage("services");
+    searchProviders(service, page);
+  } else {
+    showPage("dashboard");
+    searchProviders(service, page);
+  }
+});
+
+$("#loadProviders").on("click", async function() {
+  searchProviders($("#providerSearch").val(), "#allProviders");
+});
+
+// Demo Smart Assistant
+$("#recommendBtn").on("click", function() {
+  const input = $("#aiInput").val().trim().toLowerCase();
+  if (!input) {
+    notify("Describe your problem first.");
+    return;
+  }
+
+  const rules = [
+    { service:"Plumbing", words:["leak","tap","pipe","faucet","drain","toilet","water","sink"] },
+    { service:"Electrical", words:["wire","light","switch","electric","power","socket","fan","short circuit"] },
+    { service:"Home Cleaning", words:["clean","dust","mop","dirty","deep cleaning","wash","housekeeping"] },
+    { service:"AC Repair", words:["ac", "air conditioner", "cooling", "filter", "compressor"] },
+    { service:"Appliance Repair", words:["fridge","refrigerator","washing machine","microwave","oven","appliance","repair"] }
+  ];
+
+  const scores = rules.map(rule => ({
+    service: rule.service,
+    score: rule.words.reduce((sum, word) => sum + (input.includes(word) ? 1 : 0), 0)
+  })).sort((a, b) => b.score - a.score);
+
+  const winner = scores[0].score > 0 ? scores[0].service : "Plumbing";
+  const explanation = scores[0].score > 0
+    ? "Your description contains keywords related to " + winner.toLowerCase() + "."
+    : "We couldn't identify a specific category. Try mentioning the problem, appliance, or task.";
+
+  $("#aiResult").html(
+    "<strong>Suggested category: " + escapeHTML(winner) + "</strong><br>" +
+    escapeHTML(explanation) +
+    (scores[0].score > 0 ? '<br><button class="primary-btn" id="aiFindProviders" style="margin-top:10px">Find providers</button>' : "")
+  ).slideDown(180);
+
+  $("#aiFindProviders").off("click").on("click", function() {
+    $("#serviceSearch").val(winner);
+    showPage("dashboard");
+    searchProviders(winner, "#dashboardProviders");
+  });
+});
+
+// Form Mode / Type Switcher (No email required)
+$("#authMode, #authType").on("change", function() {
+  const register = $("#authMode").val() === "register";
+  const isProv = $("#authType").val() === "provider";
+
+  $(".reg-field").toggle(register);
+  $(".prov-field").toggle(register && isProv);
+
+  $("#authSubmit").text(register ? "Create account" : "Sign in");
+  $("#authFormTitle").text(register ? "Create your account" : "Welcome to your marketplace");
+  $("#authFormDesc").text(register
+    ? "Enter your details to register as a " + (isProv ? "service provider" : "customer") + "."
+    : "Sign in with your name and password."
+  );
+});
+$("#authMode").trigger("change");
+
+// Login / Register Submit
+$("#authSubmit").on("click", async function() {
+  const type = $("#authType").val();
+  const mode = $("#authMode").val();
+  const name = $("#authName").val().trim();
+  const password = $("#authPassword").val();
+
+  if (!name || !password) {
+    $("#authMessage").html('<span style="color:#d93025">Please enter both your name and password.</span>');
+    return;
+  }
+
+  const endpoint = "/" + type + "s/" + (mode === "register" ? "register" : "login");
+  const payload = { name, password };
+
+  if (mode === "register") {
+    const mobile = $("#authMobile").val().trim();
+    const address = $("#authAddress").val().trim();
+    if (mobile) payload.mobile = mobile;
+    if (address) payload.address = address;
+
+    if (type === "provider") {
+      const skill = $("#authSkill").val().trim() || "General";
+      const experience = parseInt($("#authExperience").val(), 10) || 1;
+      const availability = $("#authAvailability").val().trim() || "9 AM - 6 PM";
+      payload.skill = skill;
+      payload.services = [skill];
+      payload.experience = experience;
+      payload.availability = availability;
+    }
+  }
+
+  $("#authSubmit").prop("disabled", true).text("Please wait...");
+  $("#authMessage").text("");
+
+  try {
+    const result = await apiRequest(endpoint, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    if (mode === "register") {
+      $("#authMessage").html('<span style="color:var(--green)">' + escapeHTML(result.message || "Registration successful! Please sign in with your name and password.") + '</span>');
+      notify("Registered successfully! Please sign in.");
+      $("#authMode").val("login").trigger("change");
+      $("#authPassword").val("");
+    } else {
+      let user = null;
+      if (type === "customer" && result.customer) {
+        user = { ...result.customer, role: "customer" };
+      } else if (type === "provider" && result.provider) {
+        user = { ...result.provider, role: "provider" };
+      } else {
+        user = result.user || { name, role: type };
+      }
+      user.role = type;
+      setUser(user);
+      notify("Signed in successfully as " + (user.name || "User"));
+      showPage("dashboard");
+    }
+  } catch (error) {
+    $("#authMessage").html('<span style="color:#d93025">Authentication error: ' + escapeHTML(error.message) + '</span>');
+  } finally {
+    $("#authSubmit").prop("disabled", false).text(mode === "register" ? "Create account" : "Sign in");
+  }
+});
+
+// Profile Update Handler (Customer & Provider)
+$(document).on("click", "#saveProfileBtn", async function() {
+  if (!currentUser) return;
+  const isProv = currentUser.role === "provider" || !!currentUser.ProviderId;
+  const id = currentUser.CustomerID || currentUser.ProviderId;
+  if (!id) return;
+
+  const name = $("#profName").val().trim();
+  const mobile = $("#profMobile").val().trim();
+  const address = $("#profAddress").val().trim();
+
+  if (!name) {
+    $("#profFeedback").html('<span style="color:#d93025">Name cannot be empty.</span>');
+    return;
+  }
+
+  const payload = { name, mobile, address };
+
+  if (isProv) {
+    const servicesStr = $("#profServices").val().trim();
+    const experience = parseInt($("#profExperience").val(), 10) || 1;
+    const availability = $("#profAvailability").val().trim();
+    payload.services = servicesStr.split(",").map(s => s.trim()).filter(Boolean);
+    payload.experience = experience;
+    payload.availability = availability;
+  }
+
+  $("#saveProfileBtn").prop("disabled", true).text("Saving...");
+  $("#profFeedback").empty();
+
+  try {
+    const endpoint = isProv ? `/providers/profile/${encodeURIComponent(id)}` : `/customers/profile/${encodeURIComponent(id)}`;
+    const result = await apiRequest(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+
+    const updatedUser = result.customer || result.provider || { ...currentUser, ...payload };
+    updatedUser.role = isProv ? "provider" : "customer";
+    setUser(updatedUser);
+
+    $("#profFeedback").html('<span style="color:var(--green)"><i class="fa-solid fa-check"></i> Profile updated successfully!</span>');
+    notify("Profile updated successfully!");
+  } catch (err) {
+    $("#profFeedback").html('<span style="color:#d93025">Failed to update: ' + escapeHTML(err.message) + '</span>');
+  } finally {
+    $("#saveProfileBtn").prop("disabled", false).html('<i class="fa-solid fa-floppy-disk"></i> Save Changes');
+  }
+});
+
+// Bookings List
+async function loadBookings() {
+  if (!currentUser) {
+    $("#bookingList").html('<div class="empty">Please sign in first to view your bookings.</div>');
+    $("#bookingCount").text("—");
+    $("#providerBookingCount").text("0");
+    return;
+  }
+
+  $("#bookingList").html('<div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading bookings...</div>');
+  try {
+    let queryParam = "";
+    if (currentUser.role === "customer" || currentUser.CustomerID) {
+      queryParam = "?customerId=" + encodeURIComponent(currentUser.CustomerID);
+    } else if (currentUser.role === "provider" || currentUser.ProviderId) {
+      queryParam = "?providerId=" + encodeURIComponent(currentUser.ProviderId);
+    }
+
+    if (!queryParam) {
+      $("#bookingList").html('<div class="empty">Account ID missing. Please sign in again.</div>');
+      return;
+    }
+
+    const result = await apiRequest("/bookings" + queryParam);
+    const bookings = normaliseList(result);
+    $("#bookingCount").text(bookings.length);
+    $("#providerBookingCount").text(bookings.length);
+
+    if (!bookings.length) {
+      $("#bookingList").html('<div class="empty">No bookings found yet.</div>');
+      return;
+    }
+
+    const statusColors = {
+      Pending: "color:#d97706; background:#fef3c7;",
+      Accepted: "color:#2563eb; background:#dbeafe;",
+      Completed: "color:#16a34a; background:#dcfce7;",
+      Cancelled: "color:#dc2626; background:#fee2e2;"
+    };
+
+    $("#bookingList").html(bookings.map(booking => {
+      const isProvider = currentUser && (currentUser.role === "provider" || !!currentUser.ProviderId);
+      const isCustomer = !isProvider;
+
+      const status = booking.status || "Pending";
+      const isActive = status === "Pending" || status === "Accepted";
+
+      let actionButtons = "";
+      if (isProvider) {
+        if (status === "Pending") {
+          actionButtons += `<button class="primary-btn accept-booking-btn" style="padding:6px 12px; font-size:11px;" data-id="${escapeHTML(booking.BookingID)}">Accept</button>`;
+          actionButtons += `<button class="secondary-btn cancel-booking-btn" style="padding:6px 12px; font-size:11px; color:#d93025; border-color:#fca5a5;" data-id="${escapeHTML(booking.BookingID)}">Reject</button>`;
+        } else if (status === "Accepted") {
+          actionButtons += `<button class="primary-btn complete-booking-btn" style="padding:6px 12px; font-size:11px;" data-id="${escapeHTML(booking.BookingID)}">Complete</button>`;
+          actionButtons += `<button class="secondary-btn cancel-booking-btn" style="padding:6px 12px; font-size:11px; color:#d93025; border-color:#fca5a5;" data-id="${escapeHTML(booking.BookingID)}">Cancel</button>`;
+        }
+        // Chat button ONLY for eligible active bookings (Pending, Accepted); NEVER for Completed or Cancelled
+        if (isActive) {
+          actionButtons += `<button class="secondary-btn chat-booking-btn" style="padding:6px 12px; font-size:11px; color:var(--primary); border-color:#c4b5fd;" data-id="${escapeHTML(booking.BookingID)}" data-customer-id="${escapeHTML(booking.customerId)}" data-provider-id="${escapeHTML(booking.providerId)}" data-service="${escapeHTML(booking.service || 'Service')}"><i class="fa-regular fa-comment-dots"></i> Chat</button>`;
+        }
+      } else if (isCustomer) {
+        if (status === "Pending" || status === "Accepted") {
+          actionButtons += `<button class="secondary-btn cancel-booking-btn" style="padding:6px 12px; font-size:11px; color:#d93025; border-color:#fca5a5;" data-id="${escapeHTML(booking.BookingID)}">Cancel</button>`;
+        } else if (status === "Completed") {
+          actionButtons += `<button class="secondary-btn review-booking-btn" style="padding:6px 12px; font-size:11px; color:var(--primary); border-color:#c4b5fd;" data-id="${escapeHTML(booking.BookingID)}" data-provider-id="${escapeHTML(booking.providerId)}"><i class="fa-solid fa-star"></i> Review</button>`;
+        }
+        // Chat button ONLY for eligible active bookings (Pending, Accepted); NEVER for Completed or Cancelled
+        if (isActive) {
+          actionButtons += `<button class="secondary-btn chat-booking-btn" style="padding:6px 12px; font-size:11px; color:var(--primary); border-color:#c4b5fd;" data-id="${escapeHTML(booking.BookingID)}" data-customer-id="${escapeHTML(booking.customerId)}" data-provider-id="${escapeHTML(booking.providerId)}" data-service="${escapeHTML(booking.service || 'Service')}"><i class="fa-regular fa-comment-dots"></i> Chat</button>`;
+        }
+      }
+
+      const badgeStyle = statusColors[status] || "color:#666; background:#eee;";
+
+      if (isProvider) {
+        // Provider Booking Card: Service name, Booking ID, Customer's full name, Customer's mobile, Customer's complete address, Date & time, Status, Actions
+        return `
+          <article class="provider-card" style="align-items:flex-start;">
+            <div class="provider-avatar"><i class="fa-regular fa-calendar-check"></i></div>
+            <div class="provider-info">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <h3>${escapeHTML(booking.service || "Service booking")}</h3>
+                <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px; ${badgeStyle}">${escapeHTML(status)}</span>
+              </div>
+              <p style="margin-top:2px;">Booking ID: <strong>${escapeHTML(booking.BookingID)}</strong></p>
+              <div class="provider-meta" style="margin-top:8px; line-height:1.7;">
+                <div><i class="fa-solid fa-user" style="color:var(--primary);"></i> <strong>Customer:</strong> ${escapeHTML(booking.customerName || booking.customerId || "N/A")}</div>
+                <div><i class="fa-solid fa-phone" style="color:var(--green);"></i> <strong>Mobile:</strong> ${escapeHTML(booking.customerMobile || "N/A")}</div>
+                <div style="width:100%;"><i class="fa-solid fa-location-dot" style="color:#d89125;"></i> <strong>Complete Address:</strong> ${escapeHTML(booking.customerAddress || "N/A")}</div>
+                ${booking.date ? `<span><i class="fa-regular fa-calendar"></i> ${escapeHTML(booking.date)}</span>` : ""}
+                ${booking.time ? `<span><i class="fa-regular fa-clock"></i> ${escapeHTML(booking.time)}</span>` : ""}
+              </div>
+            </div>
+            ${actionButtons ? `<div style="display:flex; flex-direction:column; gap:6px; margin-left:auto; align-self:center;">${actionButtons}</div>` : ""}
+          </article>`;
+      } else {
+        // Customer Booking Card: Service name, Booking ID, Provider's full name, Date & time, Status, Actions
+        return `
+          <article class="provider-card" style="align-items:flex-start;">
+            <div class="provider-avatar"><i class="fa-regular fa-calendar-check"></i></div>
+            <div class="provider-info">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <h3>${escapeHTML(booking.service || "Service booking")}</h3>
+                <span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px; ${badgeStyle}">${escapeHTML(status)}</span>
+              </div>
+              <p style="margin-top:2px;">Booking ID: <strong>${escapeHTML(booking.BookingID)}</strong></p>
+              <div class="provider-meta" style="margin-top:8px;">
+                <div><i class="fa-solid fa-screwdriver-wrench" style="color:var(--primary);"></i> <strong>Provider:</strong> ${escapeHTML(booking.providerName || booking.providerId || "Local Professional")}</div>
+                ${booking.date ? `<span><i class="fa-regular fa-calendar"></i> ${escapeHTML(booking.date)}</span>` : ""}
+                ${booking.time ? `<span><i class="fa-regular fa-clock"></i> ${escapeHTML(booking.time)}</span>` : ""}
+              </div>
+            </div>
+            ${actionButtons ? `<div style="display:flex; flex-direction:column; gap:6px; margin-left:auto; align-self:center;">${actionButtons}</div>` : ""}
+          </article>`;
+      }
+    }).join(""));
+  } catch (error) {
+    $("#bookingList").html(`<div class="empty">${escapeHTML(error.message)}<br>Check the booking route and login requirements in your backend.</div>`);
+  }
+}
+
+// Booking creation
+$(document).on("click", ".book-btn", async function() {
+  if (!currentUser) {
+    notify("Please sign in as a customer to book a service.");
+    showPage("account");
+    return;
+  }
+  if (currentUser.role === "provider" || !!currentUser.ProviderId) {
+    notify("Service providers cannot make bookings. Please sign in as a customer.");
+    return;
+  }
+  if (!currentUser.CustomerID) {
+    notify("Only customer accounts can make bookings. Please sign in as a customer.");
+    return;
+  }
+
+  const providerId = $(this).data("provider-id");
+  const providerName = $(this).data("provider-name");
+  const defaultService = $(this).data("service") || "General";
+
+  const service = prompt(`Book service with ${providerName}:`, defaultService);
+  if (!service) return;
+
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+  const date = prompt("Enter booking date (YYYY-MM-DD):", tomorrow);
+  if (!date) return;
+
+  const time = prompt("Enter booking time:", "11:00 AM");
+  if (!time) return;
+
+  try {
+    const bookingId = "B" + Math.floor(1000 + Math.random() * 9000);
+    await apiRequest("/bookings/create", {
+      method: "POST",
+      body: JSON.stringify({
+        BookingID: bookingId,
+        customerId: currentUser.CustomerID,
+        providerId: providerId,
+        service: service,
+        date: date,
+        time: time
+      })
+    });
+
+    notify("Booking created successfully!");
+    showPage("bookings");
+    loadBookings();
+  } catch (error) {
+    notify("Failed to create booking: " + error.message);
+  }
+});
+
+// View bookings button for providers on provider cards
+$(document).on("click", ".view-bookings-btn", function() {
+  showPage("bookings");
+});
+
+// Accept booking
+$(document).on("click", ".accept-booking-btn", async function() {
+  const id = $(this).data("id");
+  try {
+    $(this).prop("disabled", true).text("...");
+    await apiRequest(`/bookings/accept/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify({ providerId: currentUser.ProviderId })
+    });
+    notify(`Booking ${id} accepted.`);
+    loadBookings();
+  } catch (err) {
+    notify(`Error: ${err.message}`);
+  }
+});
+
+// Complete booking
+$(document).on("click", ".complete-booking-btn", async function() {
+  const id = $(this).data("id");
+  try {
+    $(this).prop("disabled", true).text("...");
+    await apiRequest(`/bookings/complete/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify({ providerId: currentUser.ProviderId })
+    });
+    notify(`Booking ${id} marked as completed.`);
+    loadBookings();
+  } catch (err) {
+    notify(`Error: ${err.message}`);
+  }
+});
+
+// Cancel / Reject booking
+$(document).on("click", ".cancel-booking-btn", async function() {
+  const id = $(this).data("id");
+  const actionText = $(this).text().trim() || "Cancel";
+  if (!confirm(`Are you sure you want to ${actionText.toLowerCase()} booking ${id}?`)) return;
+  try {
+    $(this).prop("disabled", true).text("...");
+    const payload = {};
+    if (currentUser.CustomerID) payload.customerId = currentUser.CustomerID;
+    if (currentUser.ProviderId) payload.providerId = currentUser.ProviderId;
+    await apiRequest(`/bookings/cancel/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+    notify(`Booking ${id} ${actionText.toLowerCase()}led.`);
+    loadBookings();
+  } catch (err) {
+    notify(`Error: ${err.message}`);
+  }
+});
+
+// Review booking
+$(document).on("click", ".review-booking-btn", async function() {
+  const bookingId = $(this).data("id");
+  const providerId = $(this).data("provider-id");
+  const ratingStr = prompt("Enter your rating (1-5 stars):", "5");
+  if (!ratingStr) return;
+  const rating = parseInt(ratingStr, 10);
+  if (isNaN(rating) || rating < 1 || rating > 5) {
+    notify("Rating must be a number from 1 to 5.");
+    return;
+  }
+  const comment = prompt("Enter your review comment:", "Excellent service!");
+  if (!comment) return;
+
+  try {
+    await apiRequest("/reviews/add", {
+      method: "POST",
+      body: JSON.stringify({
+        ReviewId: "R" + Math.floor(1000 + Math.random() * 9000),
+        customerId: currentUser.CustomerID,
+        providerId: providerId,
+        BookingID: bookingId,
+        rating: rating,
+        comment: comment
+      })
+    });
+    notify("Review submitted successfully!");
+    loadBookings();
+  } catch (err) {
+    notify(`Error: ${err.message}`);
+  }
+});
+
+// Live Chat State and Socket.IO
+let socket = null;
+let activeChatBooking = null;
+const loadedMessageIds = new Set();
+
+function initSocket() {
+  if (socket) return socket;
+  try {
+    if (typeof io !== "undefined") {
+      socket = io("http://localhost:500");
+      socket.on("connect", () => {
+        if (activeChatBooking) {
+          socket.emit("joinRoom", activeChatBooking.BookingID);
+        }
+      });
+      socket.on("receiveMessage", (msg) => {
+        if (activeChatBooking && msg.bookingid === activeChatBooking.BookingID) {
+          appendChatMessage(msg);
+        }
+      });
+      socket.on("connect_error", (err) => {
+        console.log("Socket connection error:", err.message);
+      });
+    }
+  } catch (err) {
+    console.error("Socket initialization error:", err);
+  }
+  return socket;
+}
+
+function appendChatMessage(msg) {
+  const msgKey = msg.messageid || msg._id || (msg.timestamp + msg.message);
+  if (loadedMessageIds.has(msgKey)) return;
+  loadedMessageIds.add(msgKey);
+
+  const myId = currentUser ? (currentUser.CustomerID || currentUser.ProviderId) : "";
+  const isMe = myId && msg.senderid === myId;
+  const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
+
+  const bubbleHtml = `
+    <div style="display:flex; flex-direction:column; align-self:${isMe ? 'flex-end' : 'flex-start'}; max-width:78%;">
+      <div style="font-size:10px; color:var(--muted); margin-bottom:2px; ${isMe ? 'text-align:right;' : ''}">
+        ${isMe ? 'You' : escapeHTML(msg.senderid || 'User')}
+      </div>
+      <div style="padding:9px 13px; border-radius:${isMe ? '13px 13px 2px 13px' : '13px 13px 13px 2px'}; font-size:12px; line-height:1.5; ${isMe ? 'background:var(--primary); color:white;' : 'background:white; border:1px solid var(--border); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,0.03);'}">
+        ${escapeHTML(msg.message)}
+      </div>
+      <div style="font-size:9px; color:var(--muted); margin-top:2px; ${isMe ? 'text-align:right;' : ''}">
+        ${escapeHTML(timeStr)}
+      </div>
+    </div>`;
+
+  const $chatMessages = $("#chatMessages");
+  $chatMessages.find(".empty").remove();
+  $chatMessages.append(bubbleHtml);
+  $chatMessages.scrollTop($chatMessages[0].scrollHeight);
+}
+
+async function openChat(booking) {
+  if (!currentUser) {
+    notify("Please sign in to access chat.");
+    return;
+  }
+  const myId = currentUser.CustomerID || currentUser.ProviderId;
+  if (!myId || (myId !== booking.customerId && myId !== booking.providerId)) {
+    notify("Access denied: You are not authorized to view messages for this booking.");
+    return;
+  }
+
+  activeChatBooking = booking;
+  loadedMessageIds.clear();
+
+  const isCustomer = !!currentUser.CustomerID;
+  const otherPartyId = isCustomer ? booking.providerId : booking.customerId;
+  const otherPartyLabel = isCustomer ? `Provider (${otherPartyId})` : `Customer (${otherPartyId})`;
+
+  $("#chatTitle").text(`Chat: ${booking.service || 'Service'}`);
+  $("#chatSubtitle").text(`Booking ID: ${booking.BookingID} · With ${otherPartyLabel}`);
+  $("#chatMessages").html('<div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading messages...</div>');
+  $("#chatMessageInput").val("");
+  $("#chatModal").css("display", "flex");
+
+  initSocket();
+  if (socket && socket.connected) {
+    socket.emit("joinRoom", booking.BookingID);
+  }
+
+  try {
+    const messages = await apiRequest(`/messages/${encodeURIComponent(booking.BookingID)}`);
+    $("#chatMessages").empty();
+    const list = normaliseList(messages);
+    if (!list.length) {
+      $("#chatMessages").html('<div class="empty">No messages yet. Send a message to start the conversation!</div>');
+    } else {
+      list.forEach(msg => appendChatMessage(msg));
+    }
+  } catch (err) {
+    $("#chatMessages").html(`<div class="empty">Failed to load messages: ${escapeHTML(err.message)}</div>`);
+  }
+}
+
+function closeChat() {
+  $("#chatModal").css("display", "none");
+  activeChatBooking = null;
+}
+
+async function sendChatMessage() {
+  if (!activeChatBooking || !currentUser) return;
+  const text = $("#chatMessageInput").val().trim();
+  if (!text) return;
+
+  const senderid = currentUser.CustomerID || currentUser.ProviderId;
+  const receiverid = currentUser.CustomerID ? activeChatBooking.providerId : activeChatBooking.customerId;
+  const messageid = "M" + Date.now().toString().slice(-4) + Math.floor(10 + Math.random() * 90);
+
+  const payload = {
+    messageid,
+    bookingid: activeChatBooking.BookingID,
+    senderid,
+    receiverid,
+    message: text
+  };
+
+  $("#chatMessageInput").val("");
+
+  initSocket();
+  if (socket && socket.connected) {
+    socket.emit("sendMessage", payload);
+  } else {
+    try {
+      const res = await apiRequest("/messages/send", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      if (res && res.data) {
+        appendChatMessage(res.data);
+      }
+    } catch (err) {
+      notify(`Failed to send message: ${err.message}`);
+    }
+  }
+}
+
+$(document).on("click", ".chat-booking-btn", function() {
+  const bookingId = $(this).data("id");
+  const customerId = $(this).data("customer-id");
+  const providerId = $(this).data("provider-id");
+  const service = $(this).data("service");
+  openChat({ BookingID: bookingId, customerId, providerId, service });
+});
+
+$("#closeChatBtn").on("click", closeChat);
+$("#sendChatMessageBtn").on("click", sendChatMessage);
+$("#chatMessageInput").on("keydown", function(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendChatMessage();
+  }
+});
+$("#chatModal").on("click", function(e) {
+  if (e.target === this) closeChat();
+});
+
+$("#loadBookings").on("click", function() {
+  loadBookings();
+});
+
+$("#refreshBtn").on("click", function() {
+  notify("Marketplace refreshed.");
+  if (currentUser) {
+    setUser(currentUser);
+    refreshUserProfile();
+    loadBookings();
+  }
+  searchProviders("Plumbing", "#dashboardProviders");
+  if ($("#providers").hasClass("active")) {
+    searchProviders($("#providerSearch").val(), "#allProviders");
+  }
+  if ($("#services").hasClass("active")) {
+    searchProviders($("#serviceSearch2").val(), "#serviceProviders");
+  }
+});
+
+// Initial boot logic: First page must be login/account if not logged in
+if (currentUser) {
+  setUser(currentUser);
+  refreshUserProfile();
+  showPage("dashboard");
+} else {
+  setUser(null);
+  showPage("account");
+}
+
+// Initial dashboard background load
+searchProviders("Plumbing", "#dashboardProviders");
+</script>
+</body>
+</html>
